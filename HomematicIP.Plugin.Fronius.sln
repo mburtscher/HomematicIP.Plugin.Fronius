@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HomematicIP.Plugin.Fronius", "HomematicIP.Plugin.Fronius.csproj", "{5FAFB3B4-55B0-395F-91D6-4289C5FBAEA6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5FAFB3B4-55B0-395F-91D6-4289C5FBAEA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5FAFB3B4-55B0-395F-91D6-4289C5FBAEA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5FAFB3B4-55B0-395F-91D6-4289C5FBAEA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5FAFB3B4-55B0-395F-91D6-4289C5FBAEA6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2262B5A2-DF80-4AA1-9AA8-E9D7657CF379}
+	EndGlobalSection
+EndGlobal

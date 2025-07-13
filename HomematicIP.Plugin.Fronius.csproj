@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="HomematicIP.Net" Version="0.1.0" />
+    <ProjectReference Include="..\hmip\HomematicIP\HomematicIP.csproj" />
   </ItemGroup>
 
 </Project>

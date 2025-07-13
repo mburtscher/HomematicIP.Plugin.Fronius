@@ -5,6 +5,7 @@ using HomematicIP.Domain;
 using HomematicIP.Domain.Features;
 using System.Text.Json;
 
+var configuration = Settings.FromFile();
 var plugin = new Plugin("xyz.burtscher.homematic.plugin.fronius");
 
 plugin.RegisterHandler<DiscoverRequest>(HandleDiscoverRequest);
@@ -41,13 +42,36 @@ async Task RunPeriodicTaskAsync(Plugin plugin, CancellationToken cancellationTok
 
 void HandleConfigTemplateRequest(Plugin plugin, ConfigTemplateRequest message)
 {
+    Thread.Sleep(1000);
+
     plugin.Send(new ConfigTemplateResponse
     {
         Body = new ConfigTemplateResponseBody
         {
-            Groups = new Dictionary<string, object>(),
-            Properties = new Dictionary<string, object>(),
-        },
+            Groups = new Dictionary<string, GroupTemplate>
+            {
+                {
+                    "api",
+                    new GroupTemplate
+                    {
+                        FriendlyName = "API",
+                    }
+                }
+            },
+            Properties = new Dictionary<string, PropertyTemplate>
+            {
+                {
+                    "solarApiHost",
+                    new PropertyTemplate
+                    {
+                        DataType = PropertyType.STRING,
+                        FriendlyName = "Solar API Host",
+                        Description = "The host under which Solar API is available. API should be reachable under http://[host]/solar_api/v1/GetPowerFlowRealtimeData.fcgi",
+                        GroupId = "api",
+                    }
+                }
+            },
+        }
     });
 }
 

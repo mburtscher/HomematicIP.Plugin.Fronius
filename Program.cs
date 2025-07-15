@@ -8,6 +8,7 @@ using System.Text.Json;
 
 var configuration = Settings.FromFile();
 var plugin = new Plugin("xyz.burtscher.homematic.plugin.fronius");
+var client = new SolarApiClient(configuration);
 
 plugin.RegisterHandler<ConfigTemplateRequest>(HandleConfigTemplateRequest);
 plugin.RegisterHandler<ConfigUpdateRequest>(HandleConfigUpdateRequest);
@@ -36,7 +37,7 @@ async Task RunPeriodicTaskAsync(Plugin plugin, CancellationToken cancellationTok
             Body = new StatusResponseBody
             {
                 Success = true,
-                Devices = GetDevices(),
+                Devices = client.GetDevices(),
             },
         });
     }
@@ -81,17 +82,20 @@ void HandleConfigTemplateRequest(Plugin plugin, ConfigTemplateRequest message)
 
 void HandleConfigUpdateRequest(Plugin plugin, ConfigUpdateRequest message)
 {
+    var newConfiguration = configuration.Clone();
+
     string? solarApiBaseUrl;
     if (message.Body.Properties != null && message.Body.Properties.TryGetValue("solarApiBaseUrl", out solarApiBaseUrl))
     {
-        configuration.SolarApiBaseUrl = solarApiBaseUrl;
+        newConfiguration.SolarApiBaseUrl = solarApiBaseUrl;
     }
 
-    var context = new ValidationContext(configuration);
+    var context = new ValidationContext(newConfiguration);
     var results = new List<ValidationResult>();
 
-    if (Validator.TryValidateObject(configuration, context, results))
+    if (Validator.TryValidateObject(newConfiguration, context, results))
     {
+        configuration.Apply(newConfiguration);
         configuration.Save();
 
         plugin.Send(new ConfigUpdateResponse
@@ -124,7 +128,7 @@ void HandleDiscoverRequest(Plugin plugin, DiscoverRequest message)
         Body = new DiscoverResponseBody
         {
             Success = true,
-            Devices = GetDevices(),
+            Devices = client.GetDevices(),
         },
     };
 
@@ -138,7 +142,7 @@ void HandleInclusionEvent(Plugin plugin, InclusionEvent message)
         Body = new StatusResponseBody
         {
             Success = true,
-            Devices = GetDevices().Where(x => message.Body.DeviceIds.Contains(x.DeviceId)).ToList(),
+            Devices = client.GetDevices().Where(x => message.Body.DeviceIds.Contains(x.DeviceId)).ToList(),
         },
     });
 }
@@ -150,83 +154,9 @@ void HandleStatusRequest(Plugin plugin, StatusRequest message)
         Body = new StatusResponseBody
         {
             Success = true,
-            Devices = GetDevices().Where(x => message.Body.DeviceIds.Contains(x.DeviceId)).ToList(),
+            Devices = client.GetDevices().Where(x => message.Body.DeviceIds.Contains(x.DeviceId)).ToList(),
         },
     });
 }
 
-List<Device> GetDevices()
-{
-    int? flow_inverter = null;
-    int? flow_battery = null;
-    int? flow_grid = null;
-    int? flow_load = null;
-    double stateOfCharge = 0;
 
-    using (HttpClient client = new HttpClient())
-    {
-        try
-        {
-            var jsonResponse = client.GetStringAsync($"{configuration.SolarApiBaseUrl}/solar_api/v1/GetPowerFlowRealtimeData.fcgi").Result;
-
-            using (JsonDocument doc = JsonDocument.Parse(jsonResponse))
-            {
-                flow_inverter = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_PV").GetDecimal();
-                flow_battery = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Akku").GetDecimal();
-                flow_grid = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Grid").GetDecimal();
-                flow_load = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Load").GetDecimal();
-                stateOfCharge = doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Inverters").GetProperty("1").GetProperty("SOC").GetDouble();
-            }
-        }
-        catch { }
-    }
-
-    return new List<Device>
-                {
-                    new Device {
-                        DeviceId = new Guid("a9d52709-ae08-46e2-83e3-5266f9e59d82"),
-                        DeviceType = DeviceType.INVERTER,
-                        Features = new List<FeatureBase>
-                        {
-                            new CurrentPowerFeature { CurrentPower = -flow_inverter },
-                        },
-                        FriendlyName = "Wechselrichter",
-                        ModelType = "Fronius SymoGEN24",
-                        FirmwareVersion = "?.?.?",
-                    },
-                    new Device {
-                        DeviceId = new Guid("dd70665e-7e7f-412e-9e1f-cc58ba8f028c"),
-                        DeviceType = DeviceType.BATTERY,
-                        Features = new List<FeatureBase>
-                        {
-                            new BatteryStateFeature { BatteryLevel = stateOfCharge / 100 },
-                            new CurrentPowerFeature { CurrentPower = -flow_battery },
-                        },
-                        FriendlyName = "Batterie",
-                        ModelType = "BYD",
-                        FirmwareVersion = "?.?.?",
-                    },
-                    new Device {
-                        DeviceId = new Guid("497a45f5-439e-4a48-8cd9-944910129ff0"),
-                        DeviceType = DeviceType.GRID_CONNECTION_POINT,
-                        Features = new List<FeatureBase>
-                        {
-                            new CurrentPowerFeature { CurrentPower = flow_grid },
-                        },
-                        FriendlyName = "Netzzugang",
-                        ModelType = "Fronius Power Meter",
-                        FirmwareVersion = "?.?.?",
-                    },
-                    new Device {
-                        DeviceId = new Guid("bf207122-c538-4b14-a189-65bbf3ebbe17"),
-                        DeviceType = DeviceType.ENERGY_METER,
-                        Features = new List<FeatureBase>
-                        {
-                            new CurrentPowerFeature { CurrentPower = -flow_load },
-                        },
-                        FriendlyName = "Hausverbrauch",
-                        ModelType = "Fronius Power Meter",
-                        FirmwareVersion = "?.?.?",
-                    }
-                };
-}

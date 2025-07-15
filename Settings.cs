@@ -1,5 +1,4 @@
-﻿using HomematicIP.Domain;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 internal class Settings : IValidatableObject
@@ -11,11 +10,25 @@ internal class Settings : IValidatableObject
 #endif
 
     [Url]
+    [Required]
     public string? SolarApiBaseUrl { get; set; }
 
     public void Save()
     {
         File.WriteAllText(Filename, JsonSerializer.Serialize(this));
+    }
+
+    public Settings Clone()
+    {
+        return new Settings
+        {
+            SolarApiBaseUrl = SolarApiBaseUrl,
+        };
+    }
+
+    public void Apply(Settings newValues)
+    {
+        SolarApiBaseUrl = newValues.SolarApiBaseUrl;
     }
 
     public static Settings FromFile()
@@ -30,27 +43,9 @@ internal class Settings : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        string apiUrl = $"{SolarApiBaseUrl}/solar_api/v1/GetPowerFlowRealtimeData.fcgi";
-
-        using (HttpClient client = new HttpClient())
+        if (!SolarApiClient.ValidateBaseUrl(SolarApiBaseUrl))
         {
-            var success = false;
-
-            try
-            {
-                var response = client.GetAsync(apiUrl).Result;
-
-                if (response.IsSuccessStatusCode)
-                {
-                    success = true;
-                }
-            }
-            catch { }
-
-            if (!success)
-            {
-                yield return new ValidationResult($"Endpoint {apiUrl} not available.", [ nameof(SolarApiBaseUrl) ]);
-            }
+            yield return new ValidationResult($"API endpoint not available under {SolarApiBaseUrl}.", [nameof(SolarApiBaseUrl)]);
         }
     }
 }

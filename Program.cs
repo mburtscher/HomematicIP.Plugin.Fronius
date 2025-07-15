@@ -3,14 +3,16 @@ using HomematicIP;
 using HomematicIP.Api;
 using HomematicIP.Domain;
 using HomematicIP.Domain.Features;
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 var configuration = Settings.FromFile();
 var plugin = new Plugin("xyz.burtscher.homematic.plugin.fronius");
 
+plugin.RegisterHandler<ConfigTemplateRequest>(HandleConfigTemplateRequest);
+plugin.RegisterHandler<ConfigUpdateRequest>(HandleConfigUpdateRequest);
 plugin.RegisterHandler<DiscoverRequest>(HandleDiscoverRequest);
 plugin.RegisterHandler<InclusionEvent>(HandleInclusionEvent);
-plugin.RegisterHandler<ConfigTemplateRequest>(HandleConfigTemplateRequest);
 plugin.RegisterHandler<StatusRequest>(HandleStatusRequest);
 
 #if DEBUG
@@ -46,6 +48,7 @@ void HandleConfigTemplateRequest(Plugin plugin, ConfigTemplateRequest message)
 
     plugin.Send(new ConfigTemplateResponse
     {
+        Id = message.Id,
         Body = new ConfigTemplateResponseBody
         {
             Groups = new Dictionary<string, GroupTemplate>
@@ -54,25 +57,64 @@ void HandleConfigTemplateRequest(Plugin plugin, ConfigTemplateRequest message)
                     "api",
                     new GroupTemplate
                     {
-                        FriendlyName = "API",
+                        FriendlyName = "Solar API",
                     }
                 }
             },
             Properties = new Dictionary<string, PropertyTemplate>
             {
                 {
-                    "solarApiHost",
+                    "solarApiBaseUrl",
                     new PropertyTemplate
                     {
                         DataType = PropertyType.STRING,
-                        FriendlyName = "Solar API Host",
-                        Description = "The host under which Solar API is available. API should be reachable under http://[host]/solar_api/v1/GetPowerFlowRealtimeData.fcgi",
+                        FriendlyName = "URL",
+                        Description = "Basis-URL zur Solar API (z.B. http://192.168.0.1). Der Endpunkt /solar_api/v1/GetPowerFlowRealtimeData.fcgi muss unter dieser URL verfügbar sein. Anleitung zur Aktivierung der Solar API: https://www.youtube.com/watch?v=WHu6e-6cEUU",
                         GroupId = "api",
+                        CurrentValue = configuration.SolarApiBaseUrl,
                     }
                 }
             },
         }
     });
+}
+
+void HandleConfigUpdateRequest(Plugin plugin, ConfigUpdateRequest message)
+{
+    string? solarApiBaseUrl;
+    if (message.Body.Properties != null && message.Body.Properties.TryGetValue("solarApiBaseUrl", out solarApiBaseUrl))
+    {
+        configuration.SolarApiBaseUrl = solarApiBaseUrl;
+    }
+
+    var context = new ValidationContext(configuration);
+    var results = new List<ValidationResult>();
+
+    if (Validator.TryValidateObject(configuration, context, results))
+    {
+        configuration.Save();
+
+        plugin.Send(new ConfigUpdateResponse
+        {
+            Id = message.Id,
+            Body = new ConfigUpdateResponseBody
+            {
+                Status = ConfigUpdateResponseStatus.APPLIED,
+            }
+        });
+    }
+    else
+    {
+        plugin.Send(new ConfigUpdateResponse
+        {
+            Id = message.Id,
+            Body = new ConfigUpdateResponseBody
+            {
+                Status = ConfigUpdateResponseStatus.FAILED,
+                Message = string.Join(' ', results.Select(x => x.ErrorMessage)),
+            }
+        });
+    }
 }
 
 void HandleDiscoverRequest(Plugin plugin, DiscoverRequest message)
@@ -119,20 +161,24 @@ List<Device> GetDevices()
     int? flow_battery = null;
     int? flow_grid = null;
     int? flow_load = null;
-    double stateOfCharge;
+    double stateOfCharge = 0;
 
     using (HttpClient client = new HttpClient())
     {
-        var jsonResponse = client.GetStringAsync("http://192.168.1.70/solar_api/v1/GetPowerFlowRealtimeData.fcgi").Result;
-
-        using (JsonDocument doc = JsonDocument.Parse(jsonResponse))
+        try
         {
-            flow_inverter = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_PV").GetDecimal();
-            flow_battery = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Akku").GetDecimal();
-            flow_grid = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Grid").GetDecimal();
-            flow_load = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Load").GetDecimal();
-            stateOfCharge = doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Inverters").GetProperty("1").GetProperty("SOC").GetDouble();
+            var jsonResponse = client.GetStringAsync($"{configuration.SolarApiBaseUrl}/solar_api/v1/GetPowerFlowRealtimeData.fcgi").Result;
+
+            using (JsonDocument doc = JsonDocument.Parse(jsonResponse))
+            {
+                flow_inverter = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_PV").GetDecimal();
+                flow_battery = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Akku").GetDecimal();
+                flow_grid = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Grid").GetDecimal();
+                flow_load = (int)doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Site").GetProperty("P_Load").GetDecimal();
+                stateOfCharge = doc.RootElement.GetProperty("Body").GetProperty("Data").GetProperty("Inverters").GetProperty("1").GetProperty("SOC").GetDouble();
+            }
         }
+        catch { }
     }
 
     return new List<Device>

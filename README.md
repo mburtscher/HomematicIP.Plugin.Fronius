@@ -13,12 +13,19 @@ If the values are provided by the Solar API.
 
 # Building
 
+Run these commands in WSL to build the dotnet app:
+
 ```bash
-$pluginId=xyz.burtscher.homematic.plugin.fronius
-$pluginVersion=0.1.0
-docker build --platform=linux/arm64 --build-arg VERSION=$pluginVersion -t temp:$pluginVersion .
-docker save temp:$pluginId > $pluginId-$pluginVersion.tar
-Compress-Archive -Path $pluginId-$pluginVersion.tar -DestinationPath $pluginId-$pluginVersion.tar.gz -CompressionLevel Optimal
+dotnet build -c Release
+```
+
+And these to bundle the plugin into a Docker image:
+
+```bash
+export PLUGIN_ID="xyz.burtscher.homematic.plugin.fronius"
+export PLUGIN_VERSION="0.1.0"
+docker build --platform=linux/arm64 --build-arg VERSION=$PLUGIN_VERSION_ -t temp:$PLUGIN_VERSION .
+docker save temp:$PLUGIN_VERSION | gzip > $PLUGIN_ID-$PLUGIN_VERSION.tar.gz
 ```
 
 # License

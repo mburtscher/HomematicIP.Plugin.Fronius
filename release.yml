@@ -1,0 +1,28 @@
+# This workflow will build a .NET project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
+
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+    - name: Extract version
+      run: echo "VERSION=${{ github.ref_name }}" | sed 's/^v//' >> $GITHUB_ENV
+    - name: Build
+      run: dotnet build -c Release -p:Version=${{ env.VERSION }} -p:AssemblyVersion=${{ env.VERSION }}
+    - name: Docker build
+      run: docker build --platform=linux/arm64 --build-arg VERSION=${{ env.VERSION }} -t temp:${{ env.VERSION }}
+    - name: Docker save
+      run: docker save temp:${{ env.VERSION }} | gzip > xyz.burtscher.homematic.plugin.fronius-${{ env.VERSION }}.tar.gz

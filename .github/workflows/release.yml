@@ -23,6 +23,6 @@ jobs:
     - name: Build
       run: dotnet build -c Release -p:Version=${{ env.VERSION }} -p:AssemblyVersion=${{ env.VERSION }}
     - name: Docker build
-      run: docker build --platform=linux/arm64 --build-arg VERSION=${{ env.VERSION }} -t temp:${{ env.VERSION }}
+      run: docker build --platform=linux/arm64 --build-arg VERSION=${{ env.VERSION }} -t temp:${{ env.VERSION }} .
     - name: Docker save
       run: docker save temp:${{ env.VERSION }} | gzip > xyz.burtscher.homematic.plugin.fronius-${{ env.VERSION }}.tar.gz

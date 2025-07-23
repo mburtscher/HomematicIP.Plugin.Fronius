@@ -11,6 +11,9 @@ jobs:
   build:
 
     runs-on: ubuntu-24.04-arm
+    
+    permissions:
+      contents: write
 
     steps:
     - uses: actions/checkout@v4
@@ -26,3 +29,12 @@ jobs:
       run: docker build --platform=linux/arm64 --build-arg VERSION=${{ env.VERSION }} -t temp:${{ env.VERSION }} .
     - name: Docker save
       run: docker save temp:${{ env.VERSION }} | gzip > xyz.burtscher.homematic.plugin.fronius-${{ env.VERSION }}.tar.gz
+    - name: Upload artifact to release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./xyz.burtscher.homematic.plugin.fronius-${{ env.VERSION }}.tar.gz
+        asset_name: xyz.burtscher.homematic.plugin.fronius-${{ env.VERSION }}.tar.gz
+        asset_content_type: application/gzip

@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": ".NET Launch (Console)",
+            "type": "coreclr",
+            "request": "launch",
+            
+            // 🎯 THE BUILD TARGET 🎯
+            // This tells VS Code to run the 'build' task before debugging.
+            "preLaunchTask": "build",
+            
+            // Path to the compiled application
+            "program": "${workspaceFolder}/bin/Debug/net9.0/HomematicIP.Plugin.Fronius.dll",
+            
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        }
+    ]
+}

@@ -1,15 +1,21 @@
 ﻿using HomematicIP.Domain;
 using HomematicIP.Domain.Features;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 internal class SolarApiClient
 {
+#if DEBUG
+    private const string INVERTER_GUID = "1a194539-9be7-44c4-baec-a5585cf031c5";
+    private const string BATTERY_GUID = "898a1a50-e9c8-4c1e-bbb5-0ffb3b57cfa6";
+    private const string GRID_CONNECTION_GUID = "53be7bff-1f3e-4b0e-9b9e-5538f0110507";
+    private const string METER_GUID = "a56d607b-9a94-4975-bb5a-9f92a73e404f";
+#else
     private const string INVERTER_GUID = "a9d52709-ae08-46e2-83e3-5266f9e59d82";
     private const string BATTERY_GUID = "dd70665e-7e7f-412e-9e1f-cc58ba8f028c";
     private const string GRID_CONNECTION_GUID = "497a45f5-439e-4a48-8cd9-944910129ff0";
     private const string METER_GUID = "bf207122-c538-4b14-a189-65bbf3ebbe17";
-    private const string URL_TEMPLATE = "%s/solar_api/v1/GetPowerFlowRealtimeData.fcgi";
+#endif
+    private const string URL_TEMPLATE = "http://{0}/solar_api/v1/GetPowerFlowRealtimeData.fcgi";
 
     Settings configuration;
 
@@ -30,7 +36,7 @@ internal class SolarApiClient
         {
             try
             {
-                var jsonResponse = client.GetStringAsync(string.Format(URL_TEMPLATE, configuration.SolarApiBaseUrl)).Result;
+                var jsonResponse = client.GetStringAsync(string.Format(URL_TEMPLATE, configuration.InverterIpAddress)).Result;
 
                 using (JsonDocument doc = JsonDocument.Parse(jsonResponse))
                 {
@@ -114,7 +120,10 @@ internal class SolarApiClient
                     return true;
                 }
             }
-            catch { }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine($"[EXCEPTION] {e.Message}");
+            }
 
             return false;
         }

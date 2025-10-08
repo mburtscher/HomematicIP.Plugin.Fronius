@@ -11,7 +11,7 @@ internal class Settings : IValidatableObject
 
     [Url]
     [Required]
-    public string? SolarApiBaseUrl { get; set; }
+    public string? InverterIpAddress { get; set; }
 
     public void Save()
     {
@@ -22,13 +22,13 @@ internal class Settings : IValidatableObject
     {
         return new Settings
         {
-            SolarApiBaseUrl = SolarApiBaseUrl,
+            InverterIpAddress = InverterIpAddress,
         };
     }
 
     public void Apply(Settings newValues)
     {
-        SolarApiBaseUrl = newValues.SolarApiBaseUrl;
+        InverterIpAddress = newValues.InverterIpAddress;
     }
 
     public static Settings FromFile()
@@ -43,9 +43,9 @@ internal class Settings : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!SolarApiClient.ValidateBaseUrl(SolarApiBaseUrl))
+        if (!SolarApiClient.ValidateBaseUrl(InverterIpAddress))
         {
-            yield return new ValidationResult($"API endpoint not available under {SolarApiBaseUrl}.", [nameof(SolarApiBaseUrl)]);
+            yield return new ValidationResult($"API endpoint not available under {InverterIpAddress}.", [nameof(InverterIpAddress)]);
         }
     }
 }

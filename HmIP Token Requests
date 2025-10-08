@@ -1,0 +1,23 @@
+# Request authorization token
+
+POST https://192.168.1.251:6969/hmip/auth/requestConnectApiAuthToken
+VERSION: 12
+
+{
+    "activationKey": "XXX",
+    "pluginId":"xyz.burtscher.homematic.plugin.fronius.debug",
+    "friendlyName": {
+        "en":"Debug",
+        "de":"Debug"
+    }
+}
+
+# Confirm authorization token
+
+POST https://192.168.1.251:6969/hmip/auth/confirmConnectApiAuthToken
+VERSION: 12
+
+{
+    "activationKey": "XXX",
+    "authToken": "XXX"
+}

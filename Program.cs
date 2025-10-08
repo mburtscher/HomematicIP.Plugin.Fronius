@@ -2,12 +2,14 @@
 using HomematicIP;
 using HomematicIP.Api;
 using HomematicIP.Domain;
-using HomematicIP.Domain.Features;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 
 var configuration = Settings.FromFile();
+#if DEBUG
+var plugin = new Plugin("xyz.burtscher.homematic.plugin.fronius.debug");
+#else
 var plugin = new Plugin("xyz.burtscher.homematic.plugin.fronius");
+#endif
 var client = new SolarApiClient(configuration);
 
 plugin.RegisterHandler<ConfigTemplateRequest>(HandleConfigTemplateRequest);
@@ -17,8 +19,8 @@ plugin.RegisterHandler<InclusionEvent>(HandleInclusionEvent);
 plugin.RegisterHandler<StatusRequest>(HandleStatusRequest);
 
 #if DEBUG
-plugin.Host = "192.168.1.122";
-plugin.Token = "CBEB0C80B57A1E1EB43666DA38785BF3F539414CE5C93F15F661ABDFEEA82D46";
+plugin.Host = "192.168.1.251";
+plugin.Token = "EA885B4DE0BAAF4AED306F28A11702FA01826CAC1E34C473C7101E0E63C0C7BE";
 #endif
 
 Task startTask = plugin.Start();
@@ -65,14 +67,15 @@ void HandleConfigTemplateRequest(Plugin plugin, ConfigTemplateRequest message)
             Properties = new Dictionary<string, PropertyTemplate>
             {
                 {
-                    "solarApiBaseUrl",
+                    "inverterIpAddress",
                     new PropertyTemplate
                     {
                         DataType = PropertyType.STRING,
-                        FriendlyName = "URL",
-                        Description = "Basis-URL zur Solar API (z.B. http://192.168.0.1). Der Endpunkt /solar_api/v1/GetPowerFlowRealtimeData.fcgi muss unter dieser URL verfügbar sein. Anleitung zur Aktivierung der Solar API: https://www.youtube.com/watch?v=WHu6e-6cEUU",
+                        FriendlyName = "IP-Adresse des Wechselrichters",
+                        Description = "Unter dieser IP-Adresse muss der Endpunkt http://IP_ADRESSE/solar_api/v1/GetPowerFlowRealtimeData.fcgi verfügbar sein. Anleitung zur Aktivierung der Solar API: https://www.youtube.com/watch?v=WHu6e-6cEUU",
                         GroupId = "api",
-                        CurrentValue = configuration.SolarApiBaseUrl,
+                        CurrentValue = configuration.InverterIpAddress,
+                        Pattern = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
                     }
                 }
             },
@@ -84,10 +87,10 @@ void HandleConfigUpdateRequest(Plugin plugin, ConfigUpdateRequest message)
 {
     var newConfiguration = configuration.Clone();
 
-    string? solarApiBaseUrl;
-    if (message.Body.Properties != null && message.Body.Properties.TryGetValue("solarApiBaseUrl", out solarApiBaseUrl))
+    string? inverterIpAddress;
+    if (message.Body.Properties != null && message.Body.Properties.TryGetValue("inverterIpAddress", out inverterIpAddress))
     {
-        newConfiguration.SolarApiBaseUrl = solarApiBaseUrl;
+        newConfiguration.InverterIpAddress = inverterIpAddress;
     }
 
     var context = new ValidationContext(newConfiguration);

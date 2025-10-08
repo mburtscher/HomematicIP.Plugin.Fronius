@@ -3,3 +3,4 @@ bin
 obj
 *.tar
 *.tar.gz
+config.json

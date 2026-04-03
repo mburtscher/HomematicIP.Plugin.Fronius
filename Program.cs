@@ -17,6 +17,7 @@ plugin.RegisterHandler<ConfigUpdateRequest>(HandleConfigUpdateRequest);
 plugin.RegisterHandler<DiscoverRequest>(HandleDiscoverRequest);
 plugin.RegisterHandler<InclusionEvent>(HandleInclusionEvent);
 plugin.RegisterHandler<StatusRequest>(HandleStatusRequest);
+plugin.RegisterHandler<PluginStateRequest>(HandlePluginStateRequest);
 
 #if DEBUG
 plugin.Host = "192.168.1.251";
@@ -162,4 +163,13 @@ void HandleStatusRequest(Plugin plugin, StatusRequest message)
     });
 }
 
-
+void HandlePluginStateRequest(Plugin plugin, PluginStateRequest message)
+{
+    plugin.Send(new PluginStateResponse
+    {
+        Body = new PluginStateResponseBody
+        {
+            PluginReadinessStatus = string.IsNullOrEmpty(configuration.InverterIpAddress) ? PluginReadinessStatus.CONFIG_REQUIRED : PluginReadinessStatus.READY,
+        }
+    });
+}
